@@ -1,28 +1,45 @@
-
 ##############################################################
 #
 # AESD-ASSIGNMENTS
-#
+# modification: 27DEC2025, by Arnaud SIMO
+# Works for builds root and qemu: 30DEC2025
 ##############################################################
 
-#TODO: Fill up the contents below in order to reference your assignment 3 git contents
-AESD_ASSIGNMENTS_VERSION = '#COMMIT VERSION NUMBER'
-# Note: Be sure to reference the *ssh* repository URL here (not https) to work properly
-# with ssh keys and the automated build/test system.
-# Your site should start with git@github.com:
-AESD_ASSIGNMENTS_SITE = '#GITHUB REPOSITORY LINK'
+AESD_ASSIGNMENTS_VERSION = 8dbe362 
+AESD_ASSIGNMENTS_SITE =  git@github.com:simo-2021/git@github.com:simo-2021/valeo_tcp_server.git
 AESD_ASSIGNMENTS_SITE_METHOD = git
 AESD_ASSIGNMENTS_GIT_SUBMODULES = YES
 
 define AESD_ASSIGNMENTS_BUILD_CMDS
-	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)/finder-app all
+	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)/finder-app  all
+	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)/server  all
 endef
 
-# TODO add your writer, finder and finder-test utilities/scripts to the installation steps below
 define AESD_ASSIGNMENTS_INSTALL_TARGET_CMDS
-	$(INSTALL) -d 0755 $(@D)/conf/ $(TARGET_DIR)/etc/finder-app/conf/
-	$(INSTALL) -m 0755 $(@D)/conf/* $(TARGET_DIR)/etc/finder-app/conf/
-	$(INSTALL) -m 0755 $(@D)/assignment-autotest/test/assignment4/* $(TARGET_DIR)/bin
+	# Configuration
+	$(INSTALL) -d -m 0755 $(TARGET_DIR)/etc/finder-app/conf
+	$(INSTALL) -m 0644 $(@D)/finder-app/conf/* $(TARGET_DIR)/etc/finder-app/conf/
+
+	# Binaire writer (and aesdsocket)
+	$(INSTALL) -m 0755 $(@D)/finder-app/writer $(TARGET_DIR)/usr/bin/
+	$(INSTALL) -m 0755 $(@D)/finder-app/writer $(TARGET_DIR)/etc/finder-app/
+
+    	$(INSTALL) -m 0755 $(@D)/server/aesdsocket  $(TARGET_DIR)/usr/bin/
+	
+   	# Installer le script finder-test.sh et finder.sh (and aesdsocket-start-stop 
+    	$(INSTALL) -m 0755 $(@D)/finder-app/finder-test.sh $(TARGET_DIR)/usr/bin/
+    	$(INSTALL) -m 0755 $(@D)/finder-app/finder.sh $(TARGET_DIR)/usr/bin/
+    	
+    	$(INSTALL) -m 0755 $(@D)/server/aesdsocket-start-stop.sh  $(TARGET_DIR)/etc/init.d/S99aesdsocket
+    	    	
+    	# Installer capteur température
+	$(INSTALL) -m 0755 $(@D)/server/temp_sensor $(TARGET_DIR)/usr/bin/
+
+	# Installer service TCP
+	$(INSTALL) -m 0755 $(@D)/server/temp_server $(TARGET_DIR)/usr/bin/
+
+	# Installer script de démarrage (S98 : avant aesdsocket)
+	$(INSTALL) -m 0755 $(@D)/script/temp_service-start-stop.sh $(TARGET_DIR)/etc/init.d/S98temp_service
 endef
 
 $(eval $(generic-package))

@@ -1,0 +1,32 @@
+# Ecrit par Arnaud
+
+# Nom de l'exécutable
+TARGET = writer
+
+# Nom du compilateur (utilisation du cross-compilateur si défini)
+CROSS_COMPILE ?= /home/tchuinkou/tools/arm-gnu-toolchain-13.3.rel1-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu-gcc
+CC = $(CROSS_COMPILE)
+
+# Options de compilation
+CFLAGS = -Wall -g -std=c11
+
+# Fichier source
+SRCS = writer.c
+
+# Fichiers objets générés à partir des fichiers sources
+OBJS = $(SRCS:.c=.o)
+
+# Règle par défaut : compile l'exécutable
+all: $(TARGET)
+
+# Règle pour compiler l'exécutable à partir des objets
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
+
+# Règle pour compiler un fichier source en fichier objet
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# Règle pour nettoyer les fichiers objets et l'exécutable
+clean:
+	rm -f $(OBJS) $(TARGET)
