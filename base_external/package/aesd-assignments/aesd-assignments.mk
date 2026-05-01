@@ -5,14 +5,17 @@
 # Works for builds root and qemu: 30DEC2025
 ##############################################################
 
-AESD_ASSIGNMENTS_VERSION = 8dbe362 
-AESD_ASSIGNMENTS_SITE =  git@github.com:simo-2021/git@github.com:simo-2021/valeo_tcp_server.git
+AESD_ASSIGNMENTS_VERSION = 3803c13 
+AESD_ASSIGNMENTS_SITE =  git@github.com:simo-2021/valeo_tcp_server.git
 AESD_ASSIGNMENTS_SITE_METHOD = git
 AESD_ASSIGNMENTS_GIT_SUBMODULES = YES
 
 define AESD_ASSIGNMENTS_BUILD_CMDS
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)/finder-app  all
 	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)/server  all
+	
+	# 2. Compile votre serveur ECU à la RACINE du dépôt $(@D)
+	$(MAKE) $(TARGET_CONFIGURE_OPTS) -C $(@D)/ valeo_ivc_socket
 endef
 
 define AESD_ASSIGNMENTS_INSTALL_TARGET_CMDS
@@ -24,15 +27,15 @@ define AESD_ASSIGNMENTS_INSTALL_TARGET_CMDS
 	$(INSTALL) -m 0755 $(@D)/finder-app/writer $(TARGET_DIR)/usr/bin/
 	$(INSTALL) -m 0755 $(@D)/finder-app/writer $(TARGET_DIR)/etc/finder-app/
 
-    	$(INSTALL) -m 0755 $(@D)/server/aesdsocket  $(TARGET_DIR)/usr/bin/
+    $(INSTALL) -m 0755 $(@D)/server/aesdsocket  $(TARGET_DIR)/usr/bin/
 	
    	# Installer le script finder-test.sh et finder.sh (and aesdsocket-start-stop 
-    	$(INSTALL) -m 0755 $(@D)/finder-app/finder-test.sh $(TARGET_DIR)/usr/bin/
-    	$(INSTALL) -m 0755 $(@D)/finder-app/finder.sh $(TARGET_DIR)/usr/bin/
+    $(INSTALL) -m 0755 $(@D)/finder-app/finder-test.sh $(TARGET_DIR)/usr/bin/
+    $(INSTALL) -m 0755 $(@D)/finder-app/finder.sh $(TARGET_DIR)/usr/bin/
     	
-    	$(INSTALL) -m 0755 $(@D)/server/aesdsocket-start-stop.sh  $(TARGET_DIR)/etc/init.d/S99aesdsocket
+    $(INSTALL) -m 0755 $(@D)/server/aesdsocket-start-stop.sh  $(TARGET_DIR)/etc/init.d/S99aesdsocket
     	    	
-    	# Installer capteur température
+    # Installer capteur température
 	$(INSTALL) -m 0755 $(@D)/server/temp_sensor $(TARGET_DIR)/usr/bin/
 
 	# Installer service TCP
