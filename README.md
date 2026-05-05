@@ -20,3 +20,4 @@ System Integration
 - Log Path: /var/tmp/ecu_can_data.log
 - System Logs: Syslog (facility: LOG_USER/LOG_DAEMON)
 - Execution: Foreground or Background (Daemon)
+- Willkommen in BW
