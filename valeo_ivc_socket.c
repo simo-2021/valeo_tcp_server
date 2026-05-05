@@ -51,15 +51,14 @@ int daemon_mode = 0;
 
 // global variable to store the server socket file descriptor, needed for signal handler
 int server_fd = -1; // Socket pour le serveur, accessible globalement pour pouvoir le fermer dans le handler de signal
-int premiere_connexion = 1;
 
 /*---------------------------------End Global Configs----------------------------------------------*/
 
 /*--------------------------------------Global Fonctions--------------------------------------------*/
 
 void handle_signal(int sig) {   
-    keep_running = 0; // On demande à la boucle de s'arrêter
-    const char *msg = "\nSignal reçu !\n";
+    keep_running = 0; // um die schleife im Hauptprogramm zu beenden, wenn ein Signal empfangen wird
+    const char *msg = "\nSignal erhalten !\n";
     write(STDOUT_FILENO, msg, sizeof(msg)-1); // Affiche un message simple pour indiquer que le signal a été reçu (sans utiliser printf qui n'est pas sûr dans les handlers de signal)      
     if (server_fd != -1) {
         //shutdown(server_fd, SHUT_RDWR); // Réveille accept() immédiatement
@@ -69,9 +68,10 @@ void handle_signal(int sig) {
 }
 
 // Génération d'une trame CAN SIMULÉE (format standard automobile)
+//Frame format: [CAN] Timestamp:123456789 | ID:0x123 | RPM:3000 | V=120.5 km/h | Temp:90.0°C | P=2.5 bar
 // -----------------------------------------------------------------------------
-void read_can_frame(char *frame, size_t max_len) {
-    // Valeurs aléatoires réalistes pour un véhicule
+void read_can_frame(char *frame, size_t max_len) {    
+    // wilkürlische werte für die CAN-Frame
     int rpm = rand() % 8000 + 1000;        // 1000 - 9000 tr/min
     float speed = (rand() % 200) + 10.5f;  // 10 - 210 km/h
     float temp = (rand() % 120) + 20.0f;   // 20 - 140 °C
@@ -80,7 +80,7 @@ void read_can_frame(char *frame, size_t max_len) {
     // Format trame CAN : ID | DATA | TIMESTAMP
     time_t now = time(NULL);
     snprintf(frame, max_len,
-        "[CAN] Timestamp:%ld | ID:0x123 | RPM:%d | Vitesse:%.1f km/h | Temp:%.1f°C | Pression:%.1f bar\n",
+        "[CAN] Timestamp:%ld | ID:0x123 | RPM:%d | Geschwindigkeit:%.1f km/h | Temp:%.1f°C | Druck:%.1f bar\n",
         now, rpm, speed, temp, pressure);
 }
 
@@ -133,9 +133,10 @@ int main( int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
     }
-
-    // Si mode démon demandé, se détacher
+    
+    // Aktivierung des Daemon-Modus, wenn -d Option angegeben ist
     if (daemon_mode) {
+        syslog(LOG_INFO, "Starting in daemon mode");
         // Méthode manuelle ou appel à daemon()
         if (daemon(1, 0) == -1) {  // 1 = chdir("/"), 0 = redirige stdin/out/err vers /dev/null
             perror("daemon");
@@ -154,7 +155,7 @@ int main( int argc, char *argv[])
     int restart_server = setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &value, sizeof(value)); 
         if (restart_server < 0) {    
         perror("Erreur setsockopt");
-        syslog(LOG_INFO, "Erreur setsockopt sur le port %d", PORT);
+        syslog(LOG_INFO, "Erreur setsockopt on port %d", PORT);
         close(server_fd);
         exit(EXIT_FAILURE);
     }
@@ -170,7 +171,7 @@ int main( int argc, char *argv[])
     int listen_result = listen(server_fd, 5); // 5 = nombre de connexions en attente autorisées
     if (listen_result < 0) {
         perror("Erreur listen");
-        syslog(LOG_INFO, "Erreur listen sur le port %d", PORT);
+        syslog(LOG_INFO, "Error listen on port %d", PORT);
         close(server_fd);
         exit(EXIT_FAILURE);    }    
 
@@ -195,22 +196,22 @@ int main( int argc, char *argv[])
         }
 
         // AJOUTER CES LIGNES
-        struct timeval timeout = {
+        /*struct timeval timeout = {
             .tv_sec = 2,   // 2 secondes max
             .tv_usec = 0
         };
-        setsockopt(new_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        setsockopt(new_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+        setsockopt(new_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)); */
+        
 
         char client_ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
-        printf("Connexion acceptée: %s !\n", client_ip);
+        printf("Accepted connection from: %s !\n", client_ip);
         syslog(LOG_INFO, "Accepted connection from %s", client_ip);
         
         // si le serveur reçoit un signal d'arrêt, il ferme la connexion et arrête le serveur
         if (keep_running == 0) {
             close(new_socket);
-            printf("Connexion fermée: %s !\n", client_ip);
+            printf("Closed connection: %s !\n", client_ip);
             syslog(LOG_INFO, "Closed connection from %s", client_ip);            
             continue; // Sortir de la boucle principale pour arrêter le serveur
         }    
@@ -218,15 +219,16 @@ int main( int argc, char *argv[])
         char can_frame[256];
         read_can_frame(can_frame, sizeof(can_frame));        
         printf("%s", can_frame); // Affichage console (si pas daemon)
+        syslog(LOG_INFO, "CAN FRAMES %s", can_frame); // Log dans syslog de la trame CAN générée
 
         // texte reçu du client, on s'assure que c'est une chaîne de caractères terminée par un null         
         // write data to file
         
         FILE *file = fopen(LOG_FILE, "a"); // Ouvre en mode "append" pour ajouter à la fin du fichier sans écraser les données existantes
         if (file == NULL) {
-            perror("Erreur ouverture fichier");
+            perror("Error opening file for writing");
             close(new_socket);
-            printf("Connexion fermée: %s !\n", client_ip);            
+            printf("Closed connection: %s !\n", client_ip);
             continue;
         }
         size_t current_size = 0;
@@ -266,7 +268,7 @@ int main( int argc, char *argv[])
 
         if (written != current_size) {
             // Erreur ! On logue et on ferme
-            syslog(LOG_ERR, "Erreur d'écriture : attendu %zu, écrit %zu", current_size, written);
+            syslog(LOG_ERR, "Error writing to file: expected %zu, written %zu", current_size, written);
             perror("fwrite");
         } else {
             // Succès ! On force l'écriture physique sur le disque
@@ -282,9 +284,9 @@ int main( int argc, char *argv[])
         // 1. Ouvrir le fichier en lecture
         file = fopen(LOG_FILE, "r");
         if (file == NULL) {
-            perror("Erreur ouverture fichier pour lecture");
+            perror("Error opening file for reading");
             close(new_socket);
-            printf("Connexion fermée: %s !\n", client_ip);            
+            printf("Closed connection: %s !\n", client_ip);            
             continue;
         }
         if (file) {
@@ -307,7 +309,7 @@ int main( int argc, char *argv[])
     //free(buffer);
     close(new_socket);
     
-    printf("Connexion fermée: %s !\n", client_ip);
+    printf("Closed connection: %s !\n", client_ip);
     syslog(LOG_INFO, "Closed connection from %s", client_ip);
             
     }// End while (keep_running)

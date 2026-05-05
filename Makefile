@@ -1,6 +1,10 @@
-# Utilise le compilateur ARM si CROSS_COMPILE est défini, sinon gcc
-CC = $(CROSS_COMPILE)gcc
-CFLAGS = -Wall -g
+CC ?= $(CROSS_COMPILE)gcc
+TARGET = valeo_ivc_socket
 
-valeo_ivc_socket: valeo_ivc_socket.c
-	$(CC) $(CFLAGS) -o valeo_ivc_socket valeo_ivc_socket.c
+all: $(TARGET)
+
+$(TARGET): valeo_ivc_socket.c
+	$(CC) $(CFLAGS) -o $(TARGET) valeo_ivc_socket.c
+
+clean:
+	rm -f $(TARGET)
