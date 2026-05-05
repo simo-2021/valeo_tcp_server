@@ -1,0 +1,5 @@
+config BR2_PACKAGE_VALEO_ECU
+	bool "valeo-ecu"
+	help
+	  Simulation of an  ECU  (TCP server).
+	  
